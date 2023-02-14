@@ -1,0 +1,22 @@
+{
+  "name": "express-rest-api-template",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "echo ok && exit 1",
+    "dev": "nodemon src/app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.6",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^2.0.20",
+    "pg": "^8.9.0",
+    "pg-format": "^1.0.4",
+    "uid-safe": "^2.1.5"
+  }
+}
