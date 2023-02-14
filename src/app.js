@@ -1,20 +1,12 @@
-const express = require('express');
-
-const indexRouter = require('./routes/index');
-
-//const errorHandler = require('./middleware/errorHandler');
+import express from 'express';
+import router from './routes/Index.js';
 
 const app = express();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use('/', router);
 
-app.use('/', indexRouter);
+app.get('/', (req, res) => {
+    res.send('Hello World!')
+    });
 
-app.listen(3000, () =>
-  console.log("Server on port", 3000)
-);
-// pass any unhandled errors to the error handler
-//app.use(errorHandler);
-
-module.exports = app;
+app.listen(3000, () => console.log(`App listening at port 3000`));
