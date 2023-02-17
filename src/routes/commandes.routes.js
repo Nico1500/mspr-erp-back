@@ -13,7 +13,7 @@ router.get("/customers/:customerId", async (req, res) => {
       res.status(200).send(orders);
     } catch (error) {
       console.error(error);
-      res.status(500).send("Erreur lors de la récupération des commandes");
+      res.status(500).send("Erreur lors de la récupération des commandes.");
     }
 });
 
