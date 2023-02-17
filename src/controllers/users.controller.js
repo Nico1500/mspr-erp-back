@@ -15,6 +15,20 @@ function generateToken() {
   return buffer.toString('hex');
 }
 
+
+export const getUsersFromCRM = async () => {
+  try {
+    // Utilisez l'URL de l'API pour récupérer tous les clients du CRM
+    const response = await axios.get('https://615f5fb4f7254d0017068109.mockapi.io/api/v1/customers');
+    const customers = response.data;
+    // Renvoyer la liste des clients
+    return customers;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+
 export const getUsers = async (req, res) => {
   try {
     const result = await pool.query(`SELECT * FROM users`);
@@ -26,6 +40,8 @@ export const getUsers = async (req, res) => {
     );
   }
 };
+
+
 
 export const login = async(req, res) => {
   try{
