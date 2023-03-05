@@ -71,7 +71,7 @@ export const login = async(req, res) => {
         // Génération du token de session
         await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [generateToken(), email]);
 
-        return res.status(200).json({ message: "Connexion réussie." });
+        return res.status(200).json({ message: token });
       } else {
         return res.status(404).json({ message: "Mot de passe incorrect." });
       }

@@ -1,5 +1,5 @@
 const request = require('supertest');
-const { app } = require('../app');
+const app = require('../src/app').default;
 
 describe('POST /register', () => {
   it('should return 200 with success message on successful registration', async () => {
