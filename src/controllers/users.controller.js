@@ -1,10 +1,13 @@
 import { pool } from "../database.js";
-import qrcode from 'qrcode';
 import fs from 'fs/promises';
-const nodemailer = require('nodemailer');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
-const { promisify } = require('util');
+import nodemailer from 'nodemailer';
+
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import {promisify} from 'util';
+import qrcode from 'qrcode';
+import path from 'path';
+
 
 const readFileAsync = promisify(fs.readFile);
 
@@ -14,6 +17,7 @@ function generateToken() {
   const buffer = crypto.randomBytes(32);
   return buffer.toString('hex');
 }
+
 
 
 export const getUsersFromCRM = async () => {
@@ -45,30 +49,34 @@ export const getUsers = async (req, res) => {
 
 export const login = async(req, res) => {
   try{
-
     const { email, password } = req.query;
+
     const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
 
-    //verification existence utilisateur 
+    // Vérification existence utilisateur 
     if (result.rowCount !== 1) {
       return res.status(200).json({ message: "Utilisateur inconnu" });
     }
-    //verification du mot de passe
-    bcrypt.compare(password, result.rows[0].password, function(err, result) {
-      if (result == true) {
+
+    // Vérification du mot de passe
+    bcrypt.compare(password, result.rows[0].password, async function(err, match) {
+      if (match) {
         // Mot de passe valide
 
-       //on doit generer le token pour la session de l'utilisateur :
-        pool.query(`UPDATE users set token = $1 WHERE email = $2`, [email,generateToken()]);
+        // Vérification si l'api key a été validée
+        if (result.rows[0].is_api_key_validated == false || result.rows[0].is_api_key_validated == null) {
+          return res.status(200).json({ message: "Vous devez valider votre clé API avant de vous connecter." });
+        }
 
+        // Génération du token de session
+        await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [generateToken(), email]);
 
-        return res.status(200).json({ message: "Connexion reussie." });
+        return res.status(200).json({ message: "Connexion réussie." });
       } else {
-        return res.status(404).json({ message: "mot de passe incorrect." });
+        return res.status(404).json({ message: "Mot de passe incorrect." });
       }
     });
 
-    return res.status(404).json({ message: "Utilisateur non trouvé" });
   } catch(error){
     // En cas d'erreur, envoyer une réponse JSON avec un statut 500 Internal Server Error
     return res.status(500).json({ message: "Erreur lors de la recherche de l'utilisateur" });
@@ -76,81 +84,113 @@ export const login = async(req, res) => {
 }
 
 
-//todo : ajouter la verification de la premiere connexion avec le qr code
-//attend un mail en request
-export const IsFirstLogin = async (req, res) => {
-  try {
-    const {email} = req.query;
 
-    const result = pool.query(`SELECT is_api_key_validated from users  WHERE email = $1`, [email]);
-    return result[0].is_api_key_validated == false ? res.status(200).json({ message: "false" }) : res.status(200).json({ message: "true" });
+
+//on valide l'inscription grace a la clé d'api => concerne les revendeurs
+export const ValidateApiKey = async (req, res) => {
+  try {
+    const { key, email } = req.query;
+
+    const results = await pool.query(`SELECT is_api_key_validated, api_key FROM users WHERE email = $1 AND api_key = $2`, [email, key]);
+
+    const user = results.rows.find((row) => row.api_key === key);
+
+    if (user) {
+      const isApiKeyValidated = user.is_api_key_validated;
+      if (isApiKeyValidated === null || isApiKeyValidated === false) {
+        await pool.query(`UPDATE users SET is_api_key_validated = true WHERE email = $1 AND api_key = $2`, [email, key]);
+      }
+
+      const token = generateToken();
+      await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [token, email]);
+
+      return res.status(200).json({ message: token });
+    } else {
+      return res.status(400).json({ message: "La clé API n'est pas valide pour cet e-mail." });
+    }
   } catch (error) {
-    return res.status(500).json({ message: "Erreur lors de la recherche de l'utilisateur" });
+    console.log(error);
+    return res.status(500).json({ message: "Erreur lors de la recherche de l'utilisateur." });
   }
 };
+
+
+
 
 export const register = async (req, res) => {
   try {
     const { email, password, profile } = req.query;
 
+    // Check if user already exists
+    const existingUser = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+    if (existingUser.rowCount > 0) {
+      return res.status(400).json({ message: "Un compte avec cet email existe déjà." });
+    }
+
     let api_key;
     if (profile == "revendeur") {
       api_key = generateToken();
     } else {
-      api_key = "fwà)zg$*!f4r(fz:,w'&f&éù1à8=";
+      const result = await pool.query(`SELECT key FROM webshopkey`);
+       api_key = result.rowCount > 0 ? result.rows[0].key : null;
     }
 
-    // Options for the QR code
-    const options = {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert the user into the database
+    await pool.query(`INSERT INTO users (email,password,api_key,is_api_key_validated) VALUES ($1,$2,$3,$4)`, [email, hashedPassword, api_key,0]);
+
+    // Generate the QR code buffer
+    const qrCodeBuffer = await qrcode.toBuffer(`${api_key}`, {
       errorCorrectionLevel: 'H',
       type: 'png',
       margin: 1,
       quality: 0.92,
       scale: 4
-    };
-
-    // Generate the QR code
-    const data = `api_key=${api_key}`;
-    const filename = `qrcode-${generateToken()}.png`;
-    qrcode.toFile(filename, data, options);
+    });
 
     // Create a nodemailer transporter
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: 'arabiantiger30@gmail.com',
-        pass: 'Lahonda27!'
+        pass: 'asjxumvusloungry'
       }
     });
 
-    // Read the QR code file
-    const qrCodeBuffer = await readFileAsync(filename);
 
-    // Create the e-mail message
+   // Create the e-mail message
     const mailOptions = {
-      from: 'zaki-mazog@outlook.fr',
+      from: 'arabiantiger30@gmail.com',
       to: email,
       subject: 'QR Code',
-      text: 'Voici votre QR code.',
+      html: `
+        <p>Bonjour,</p>
+        <p>Nous vous remercions de votre inscription à PayTonKawa. Pour finaliser votre inscription, vous devez scanner le code QR ci-joint. Ce code contient une clé API qui vous sera utile pour utiliser les services de PayTonKawa.</p>
+        <p>Le processus de numérisation est simple. Vous pouvez utiliser l'appareil photo de votre téléphone pour numériser le code QR. Une fois que vous l'avez numérisé, vous aurez accès à votre clé API.</p>
+        <p>Si vous rencontrez des difficultés pour scanner le code, n'hésitez pas à contacter notre équipe d'assistance à l'adresse support@paytonkawa.com. Nous serons heureux de vous aider.</p>
+        <p>Cordialement,<br>L'équipe PayTonKawa</p>
+        `,
       attachments: [
         {
-          filename: filename,
+          filename: 'qrcode.png',
           content: qrCodeBuffer
         }
       ]
     };
 
+
+
     // Send the e-mail message
     await transporter.sendMail(mailOptions);
 
-    // Insert the user into the database
-    await pool.query(`INSERT INTO users (email,password,api_key) VALUES ($1,$2,$3)`, [email, password, api_key]);
-
     return res.status(200).json({ message: "Création du compte réussie." });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ message: "Erreur lors de la création du compte" });
   }
 };
+
 
 export const test = async (req, res) => {
     try {

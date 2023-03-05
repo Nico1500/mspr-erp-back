@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUsers, test,login,register,IsFirstLogin,getUsersFromCRM } from "../controllers/users.controller.js";
+import { getUsers, test,login,register,getUsersFromCRM,ValidateApiKey } from "../controllers/users.controller.js";
 const router = Router();
 
 //router.post("/", createUser);
@@ -7,7 +7,7 @@ router.get("/all", getUsers);
 router.get("/", test);
 router.get("/login", login);
 router.post("/register", register);
-router.get("/isFirstLogin", IsFirstLogin);
+router.post("/ValidateApiKey", ValidateApiKey);
 
 // Route pour récupérer la liste de tous les clients du CRM
 router.get("/usersFromCrm", async (req, res) => {

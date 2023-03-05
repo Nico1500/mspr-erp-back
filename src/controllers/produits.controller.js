@@ -1,7 +1,13 @@
 import { pool } from "../database.js";
-const axios = require('axios');
+import axios from 'axios';
 
 pool.connect;
+
+
+//TODO -- VERIFIER SI LUTILISTEUR A ACCES A CES URL 
+
+
+
 
 // La fonction getAllProducts récupère tous les produits de l'ERP
 export const getAllProducts = async () => {
