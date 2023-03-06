@@ -1,9 +1,11 @@
 const request = require('supertest');
-const app = require('../src/app').default;
+const http = require('http');
+const app = require('../src/app');
+const server = http.createServer(app);
 
 describe('POST /register', () => {
   it('should return 200 with success message on successful registration', async () => {
-    const response = await request(app)
+    const response = await request(server)
       .post('/register')
       .query({
         email: 'test@example.com',
@@ -16,7 +18,7 @@ describe('POST /register', () => {
   });
 
   it('should return 400 with error message if user already exists', async () => {
-    const response = await request(app)
+    const response = await request(server)
       .post('/register')
       .query({
         email: 'test@example.com',
