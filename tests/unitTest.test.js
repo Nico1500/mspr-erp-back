@@ -6,7 +6,7 @@ function add(a, b) {
 }
 
 describe('add', () => {
-  test('should return the sum of two numbers', () => {
+  it('should return the sum of two numbers', () => {
     const result = add(2, 3);
     const expected = 5;
 
