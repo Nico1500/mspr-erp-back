@@ -5,7 +5,7 @@ const router = Router();
 
 
 router.get("/customers/:customerId/:apiKey", async (req, res) => {
-  const { apiKey, customerId } = req.query;
+  const { apiKey, customerId } = req.params;
 
   try {
      // Vérification de l'accès via la clé API
