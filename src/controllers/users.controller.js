@@ -203,4 +203,6 @@ export const test = async (req, res) => {
     }
 };
 
+export default getUsers;
+
 
