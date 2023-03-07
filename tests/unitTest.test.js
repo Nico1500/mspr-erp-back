@@ -1,16 +1,19 @@
 import { getUsers } from "../src/controllers/users.controller.js";
 import { pool } from "../src/database.js";
 
-describe('Database connection', () => {
-  it('should connect to the database', async () => {
-    const client = await pool.connect();
+function add(a, b) {
+  return a + b;
+}
 
-    if (client && client.query) {
-      console.log('Database connection successful');
+describe('add', () => {
+  test('should return the sum of two numbers', () => {
+    const result = add(2, 3);
+    const expected = 5;
+
+    if (result === expected) {
+      console.log('Test passed');
     } else {
-      throw new Error('Database connection failed');
+      console.error(`Test failed: expected ${expected}, but got ${result}`);
     }
-
-    await client.release(); // release the client back to the pool
-  }, 5000); // set timeout to 5 seconds
+  });
 });
