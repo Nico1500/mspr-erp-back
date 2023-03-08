@@ -4,10 +4,10 @@ import "dotenv/config";
 const { Pool } = pkg;
 
 export const pool = new Pool({
-  user: "postgres",
-  host: "db",
+  user: "nico",
+  host: "20.111.12.5",
   database: "mspr",
-  password: "password",
+  password: "Jvubc2v@lpdmta!",
   port: 5432,
 });
 

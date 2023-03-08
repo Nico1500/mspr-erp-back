@@ -4,8 +4,6 @@ import axios from 'axios';
 
 pool.connect;
 
-//TODO -- VERIFIER SI LUTILISTEUR A ACCES A CES URL 
-
 //todo recuperer La liste des commandes d’un client
 export const getCustomerOrders = async (customerId) => {
   try {
