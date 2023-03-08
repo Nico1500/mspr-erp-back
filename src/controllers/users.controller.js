@@ -68,8 +68,10 @@ export const login = async(req, res) => {
           return res.status(200).json({ message: "Vous devez valider votre clé API avant de vous connecter." });
         }
 
+        const token = generateToken();
+
         // Génération du token de session
-        await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [generateToken(), email]);
+        await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [token, email]);
 
         return res.status(200).json({ message: token });
       } else {

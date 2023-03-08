@@ -34,3 +34,18 @@ describe('GET /users', () => {
 });
 
 
+describe('POST /register', () => {
+  it('should return 200 with success message on successful regustration', async() => {
+    const response = await request(app)
+    .post('/users/register')
+    .query({
+      email: 'zaki-mazog@outlook.fr',
+      password: 'password',
+      profile: 'revendeur'
+    });
+    expect(response.status).to.equal(400);
+    expect(response.body.message).to.equal("Un compte avec cet email existe déjà.");
+
+  })
+})
+
