@@ -2,11 +2,25 @@ import { pool } from "../database.js";
 import fs from 'fs/promises';
 import nodemailer from 'nodemailer';
 
-import bcrypt from 'bcrypt';
+//import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import {promisify} from 'util';
 import qrcode from 'qrcode';
 import path from 'path';
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  return {
+    salt: salt,
+    hash: hash
+  };
+}
+
+function verifyPassword(password, hash, salt) {
+  const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  return hash === verifyHash;
+}
 
 
 const readFileAsync = promisify(fs.readFile);
@@ -52,32 +66,28 @@ export const login = async(req, res) => {
     const { email, password } = req.query;
 
     const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
-
+    console.log(result.rows);
     // Vérification existence utilisateur 
     if (result.rowCount !== 1) {
       return res.status(200).json({ message: "Utilisateur inconnu" });
     }
 
-    // Vérification du mot de passe
-    bcrypt.compare(password, result.rows[0].password, async function(err, match) {
-      if (match) {
-        // Mot de passe valide
+    const newPassword = hashPassword(password);
+    
+    if (result.rows[0].password !== newPassword.hash) {
+      return res.status(200).json({ message: "Mot de passe incorrect" });
+    }
 
-        // Vérification si l'api key a été validée
-        if (result.rows[0].is_api_key_validated == false || result.rows[0].is_api_key_validated == null) {
-          return res.status(200).json({ message: "Vous devez valider votre clé API avant de vous connecter." });
-        }
-
-        const token = generateToken();
+    if (result.rows[0].token_session === null) {
+      const token = generateToken();
 
         // Génération du token de session
-        await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [token, email]);
+      await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [token, email]);
 
-        return res.status(200).json({ message: token });
-      } else {
-        return res.status(404).json({ message: "Mot de passe incorrect." });
-      }
-    });
+      return res.status(200).json({ message: token });
+    }
+
+    return res.status(200).json({ message: "OK" });
 
   } catch(error){
     // En cas d'erreur, envoyer une réponse JSON avec un statut 500 Internal Server Error
@@ -137,10 +147,10 @@ export const register = async (req, res) => {
        api_key = result.rowCount > 0 ? result.rows[0].key : null;
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const newPassword = hashPassword(password);
 
     // Insert the user into the database
-    await pool.query(`INSERT INTO users (email,password,api_key,is_api_key_validated) VALUES ($1,$2,$3,$4)`, [email, hashedPassword, api_key,0]);
+    await pool.query(`INSERT INTO users (email,password,api_key,is_api_key_validated) VALUES ($1,$2,$3,$4)`, [email, newPassword, api_key,0]);
 
     // Generate the QR code buffer
     const qrCodeBuffer = await qrcode.toBuffer(`${api_key}`, {
