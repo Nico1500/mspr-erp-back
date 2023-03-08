@@ -9,11 +9,11 @@ router.get("/login", login);
 router.post("/register", register);
 router.post("/ValidateApiKey", ValidateApiKey);
 
-// Route pour récupérer la liste de tous les clients du CRM
+// Route pour récupérer la liste de tous les clients du CRM²
 router.get("/usersFromCrm", async (req, res) => {
     try {
       // Utiliser la fonction getAllCustomers pour récupérer la liste de tous les clients du CRM
-      const customers = await getAllCustomers();
+      const customers = await getUsersFromCRM();
       // Renvoyer la liste des clients
       res.status(200).send(customers);
     } catch (error) {
