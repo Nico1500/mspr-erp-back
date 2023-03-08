@@ -9,7 +9,7 @@
     "tester": "npm run test",
     "build": "rimraf dist && babel src --out-dir dist  --copy-files",
     "start": "node dist/app.js",
-    "dev": "nodemon src/App.js",
+    "dev": "nodemon app.js",
     "start:dev": "nodemon --exec babel-node src/app.js"
   },
   "repository": {
