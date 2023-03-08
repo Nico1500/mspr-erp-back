@@ -9,18 +9,13 @@ import qrcode from 'qrcode';
 import path from 'path';
 
 function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  const hash = crypto.pbkdf2Sync(password, 'mySecret', 10000, 64, 'sha512').toString('hex');
   return {
-    salt: salt,
     hash: hash
   };
 }
 
-function verifyPassword(password, hash, salt) {
-  const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-  return hash === verifyHash;
-}
+
 
 
 const readFileAsync = promisify(fs.readFile);
@@ -72,16 +67,17 @@ export const login = async(req, res) => {
       return res.status(200).json({ message: "Utilisateur inconnu" });
     }
 
-    const newPassword = hashPassword(password);
-    
-    if (result.rows[0].password !== newPassword.hash) {
+    const storedPassword = result.rows[0].password;
+    const hashedPassword = hashPassword(password).hash;
+
+    if (storedPassword !== hashedPassword) {
       return res.status(200).json({ message: "Mot de passe incorrect" });
     }
 
     if (result.rows[0].token_session === null) {
       const token = generateToken();
 
-        // Génération du token de session
+      // Génération du token de session
       await pool.query(`UPDATE users SET token_session = $1 WHERE email = $2`, [token, email]);
 
       return res.status(200).json({ message: token });
@@ -94,6 +90,7 @@ export const login = async(req, res) => {
     return res.status(500).json({ message: "Erreur lors de la recherche de l'utilisateur" });
   }
 }
+
 
 
 
@@ -144,13 +141,13 @@ export const register = async (req, res) => {
       api_key = generateToken();
     } else {
       const result = await pool.query(`SELECT key FROM webshopkey`);
-       api_key = result.rowCount > 0 ? result.rows[0].key : null;
+      api_key = result.rowCount > 0 ? result.rows[0].key : null;
     }
 
-    const newPassword = hashPassword(password);
+    const { hash: hashedPassword } = hashPassword(password);
 
     // Insert the user into the database
-    await pool.query(`INSERT INTO users (email,password,api_key,is_api_key_validated) VALUES ($1,$2,$3,$4)`, [email, newPassword, api_key,0]);
+    await pool.query(`INSERT INTO users (email,password,api_key,is_api_key_validated) VALUES ($1,$2,$3,$4)`, [email, hashedPassword, api_key, 0]);
 
     // Generate the QR code buffer
     const qrCodeBuffer = await qrcode.toBuffer(`${api_key}`, {
