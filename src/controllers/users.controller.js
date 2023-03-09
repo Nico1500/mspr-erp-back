@@ -76,7 +76,11 @@ export const login = async(req, res) => {
       return res.status(200).json({ message: "Mot de passe incorrect" });
     }
 
-    if (result.rows[0].token_session === null) {
+    if (result.rows[0].is_api_key_validated == false || result.rows[0].is_api_key_validated == null) {
+      return res.status(200).json({ message: "Vous devez valider votre clé API avant de vous connecter." });
+    }
+
+    if (result.rows[0].token_session === null || '') {
       const token = generateToken();
 
       // Génération du token de session
